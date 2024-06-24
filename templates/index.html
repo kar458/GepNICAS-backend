@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIAS Alerts</title>
+</head>
+<body style="background-color: brown;">
+    <h1>GIAS Alerts</h1>
+    <table border="1">
+        <tr>
+            <th>Portal Name</th>
+            <th>Logo</th>
+        </tr>
+        {% for alert in alerts %}
+        <tr>
+            <td>{{ alert.portalname }}</td>
+            <td><img src="data:image/png;base64,{{ alert.logo }}" alt="{{ alert.portalname }} Logo" /></td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
