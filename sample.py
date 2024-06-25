@@ -20,6 +20,36 @@ conn = psycopg2.connect(
 @app.route('/',methods=['GET'])
 def index():
     return "hello"
+
+@app.route('/api/get_data', methods=['GET'])
+def get_data():
+    # Create a cursor object to execute SQL queries
+    cursor = conn.cursor()
+
+    # SQL query to select data from the database for id=1
+    sql_query = "SELECT * FROM gepnicas_config_master WHERE id = 1"
+    cursor.execute(sql_query)
+
+    # Fetch the result
+    result = cursor.fetchone()
+
+    # Close the cursor
+    cursor.close()
+
+    # Return a JSON response with the retrieved data
+    if result:
+        data = {
+            'id': result[0],
+            'archive_solution_shortname': result[1],
+            'archive_solution_fullname': result[2],
+            'archive_age_in_years': result[3],
+            'nas_storage_capacity': result[4]
+        }
+        return jsonify(data), 200
+    else:
+        return jsonify({'error': 'Data not found'}), 404
+
+
 # Define a route to handle POST requests
 @app.route('/api/update_data', methods=['POST'])
 def update_data():
