@@ -325,21 +325,21 @@ def getBidsTenderInstanceMetalink():
     if instancename:
         bids_query_total = sql.SQL(
             "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
-            "WHERE instancename = %s AND foldertype = 'bids' AND metadatastatus = 'MetadataPending'"
+            "WHERE instancename = %s AND foldertype = 'bids' AND metadatastatus != 'MetadataCreated'"
         )
         tenders_query_total = sql.SQL(
             "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
-            "WHERE instancename = %s AND foldertype = 'tender' AND metadatastatus = 'MetadataPending'"
+            "WHERE instancename = %s AND foldertype = 'tender' AND metadatastatus != 'MetadataCteated'"
         )
         params = (instancename,)
     else:
         bids_query_total = sql.SQL(
             "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
-            "WHERE foldertype = 'bids' AND metadatastatus = 'MetadataPending'"
+            "WHERE foldertype = 'bids' AND metadatastatus != 'MetadataCreated'"
         )
         tenders_query_total = sql.SQL(
             "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
-            "WHERE foldertype = 'tender' AND metadatastatus = 'MetadataPending'"
+            "WHERE foldertype = 'tender' AND metadatastatus != 'MetadataCreated'"
         )
         params = ()
 
@@ -383,6 +383,80 @@ def getBidsTenderInstanceError():
     conn.close()
 
     return jsonify(result)
+
+
+
+@app.route('/getBidsTenderInstanceSoftlink', methods=['GET'])
+def getBidsTenderInstanceSoftlink():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    instancename = request.args.get('instancename')
+
+    if instancename:
+        bids_query_total = sql.SQL(
+            "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
+            "WHERE instancename = %s AND foldertype = 'bids' AND metadatastatus = 'MetadataCreated' AND softlinkstatus != 'SoftLinkCreated'"
+        )
+        tenders_query_total = sql.SQL(
+            "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
+            "WHERE instancename = %s AND foldertype = 'tender' AND metadatastatus = 'MetadataCteated' AND softlinkstatus != 'SoftLinkCreated'"
+        )
+        params = (instancename,)
+    else:
+        bids_query_total = sql.SQL(
+            "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
+            "WHERE foldertype = 'bids' AND metadatastatus = 'MetadataCreated' AND softlinkstatus != 'SoftLinkCreated'"
+        )
+        tenders_query_total = sql.SQL(
+            "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
+            "WHERE foldertype = 'tender' AND metadatastatus = 'MetadataCreated' AND softlinkstatus != 'SoftLinkCreated'"
+        )
+        params = ()
+
+    result = fetch_bids_and_tenders(cursor, bids_query_total, tenders_query_total, params)
+
+    cursor.close()
+    conn.close()
+
+    return jsonify(result)
+
+
+
+@app.route('/getBidsTenderInstanceOnProcess', methods=['GET'])
+def getBidsTenderInstanceOnProcess():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    instancename = request.args.get('instancename')
+
+    if instancename:
+        bids_query_total = sql.SQL(
+            "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
+            "WHERE instancename = %s AND foldertype = 'bids' AND archivestatus != 'SyncCompleted' AND archivestatus NOT LIKE %s "
+        )
+        tenders_query_total = sql.SQL(
+            "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
+            "WHERE instancename = %s AND foldertype = 'tender' AND archivestatus != 'SyncCompleted' AND archivestatus NOT LIKE %s"
+        )
+        params = (instancename, '%SyncError%')
+    else:
+        bids_query_total = sql.SQL(
+            "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
+            "WHERE foldertype = 'bids' AND archivestatus != 'SyncCompleted' AND archivestatus NOT LIKE %s"
+        )
+        tenders_query_total = sql.SQL(
+            "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
+            "WHERE foldertype = 'tender' AND archivestatus != 'SyncCompleted' AND archivestatus NOT LIKE %s"
+        )
+        params = ('%SyncError%',)
+
+    result = fetch_bids_and_tenders(cursor, bids_query_total, tenders_query_total, params)
+
+    cursor.close()
+    conn.close()
+
+    return jsonify(result)
+
+
 
 
 
