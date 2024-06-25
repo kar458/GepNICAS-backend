@@ -11,9 +11,9 @@ app = Flask(__name__)
 
 # Database connection configuration
 conn = psycopg2.connect(
-    dbname="gias",
+    dbname="gepnicas",
     user="postgres",
-    password="mathan",
+    password="Preethi@31",
     host="localhost",
     port="5432"
 )
@@ -21,7 +21,7 @@ conn = psycopg2.connect(
 def index():
     return "hello"
 # Define a route to handle POST requests
-@app.route('/api/update_data', methods=['POST'])
+@app.route('/postConfigMaster', methods=['POST'])
 def update_data():
     # Get the JSON data from the request
     data = request.get_json()
@@ -51,4 +51,4 @@ def update_data():
 
 # Run the Flask app
 if __name__ == '__main__':
-    app.run(host='192.168.0.107',port=5500,debug=True)
+    app.run(host='192.168.0.109',port=5500,debug=True)
