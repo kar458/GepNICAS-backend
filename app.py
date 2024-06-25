@@ -45,17 +45,9 @@ def index():
     ]
     
     return render_template('index.html', alerts=alerts_with_base64)
-@app.route('/getValue', methods=['POST'])
-def getValue():
-    image_id = request.json.get('imageId')
-    if image_id == 'img1':
-        value = 'Value for Image 1'
-    elif image_id == 'img2':
-        value = 'Value for Image 2'
-    else:
-        value = 'Unknown Image'
 
-    return jsonify({'value': value})
+# removed the getvalue sample get method
+
 @app.route('/getImages', methods=['GET'])
 def getImages():
     conn = get_db_connection()
@@ -75,8 +67,8 @@ def getImages():
     ]
 
     return jsonify(images_with_base64)
-
-
+#for logos and images
+#################################################################################################
 def get_instancename_count(instancename):
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -154,7 +146,7 @@ def getInstanceCount():
         'counts': counts
     })
 #total counts
-#########################################################
+####################################################################################################
 
 
 def get_instancename_count_all():
@@ -228,11 +220,12 @@ def getInstanceCountAll():
 
 
 #Total records
-#################################################################
+##############################################################################################
 
 
 
-#######################################################################################
+##############################################################################################
+#for sending bids and tenders-for both instance and all 
 def fetch_bids_and_tenders(cursor, bids_query, tenders_query, params):
     cursor.execute(bids_query, params)
     bids_total = cursor.fetchall()
@@ -397,194 +390,6 @@ def getBidsTenderInstanceError():
 #Total records-Instance
 #################################################################
 
-"""@app.route('/getBidsTenderInstance', methods=['GET'])
-
-def getBidsTenderInstance():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    instancename = request.args.get('instancename')
-    bids_query_total = sql.SQL("SELECT datafolder,archivefolder FROM gepnicas_bids_tenders_master WHERE  instancename = %s AND foldertype = 'bids' ")
-    
-
-    
-    cursor.execute(bids_query_total,(instancename,))
-    bids_total = cursor.fetchall()
-
-
-    tender_query_total = sql.SQL("SELECT datafolder,archivefolder FROM gepnicas_bids_tenders_master WHERE instancename = %s AND foldertype = 'tender'  ")
-    cursor.execute(tender_query_total,(instancename,))
-    tender_total = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    bids = [
-        {
-            'bids_datafolder': bid[0],
-            'bids_archivefolder': bid[1]
-        } for bid in bids_total
-    ]
-    
-    tenders = [
-        {
-            'tenders_datafolder': tender[0],
-            'tenders_archivefolder': tender[1]
-        } for tender in tender_total
-    ]
-
-    result = {
-        'bids': bids,
-        'tenders': tenders
-    }
-
-    return jsonify(result)
-
-#Archived-Instance
-@app.route('/getBidsTenderInstanceArchived', methods=['GET'])
-
-def getBidsTenderInstanceArchived():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    instancename = request.args.get('instancename')
-    bids_query_total = sql.SQL("SELECT datafolder,archivefolder FROM gepnicas_bids_tenders_master WHERE  instancename = %s AND foldertype = 'bids'AND softlinkstatus = 'SoftLinkCreated' ")
-    
-
-    
-    cursor.execute(bids_query_total,(instancename,))
-    bids_total = cursor.fetchall()
-
-
-    tender_query_total = sql.SQL("SELECT datafolder,archivefolder FROM gepnicas_bids_tenders_master WHERE instancename = %s AND foldertype = 'tender' AND softlinkstatus = 'SoftLinkCreated'  ")
-    cursor.execute(tender_query_total,(instancename,))
-    tender_total = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    bids = [
-        {
-            'bids_datafolder': bid[0],
-            'bids_archivefolder': bid[1]
-        } for bid in bids_total
-    ]
-    
-    tenders = [
-        {
-            'tenders_datafolder': tender[0],
-            'tenders_archivefolder': tender[1]
-        } for tender in tender_total
-    ]
-
-    result = {
-        'bids': bids,
-        'tenders': tenders
-    }
-
-    return jsonify(result)
-
-
-#Metalink-Instance
-@app.route('/getBidsTenderInstanceMetalink', methods=['GET'])
-
-def getBidsTenderInstanceMetalink():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    instancename = request.args.get('instancename')
-    bids_query_total = sql.SQL("SELECT datafolder,archivefolder FROM gepnicas_bids_tenders_master WHERE  instancename = %s AND foldertype = 'bids'AND metadatastatus = 'MetadataPending' ")
-    
-
-    
-    cursor.execute(bids_query_total,(instancename,))
-    bids_total = cursor.fetchall()
-
-
-    tender_query_total = sql.SQL("SELECT datafolder,archivefolder FROM gepnicas_bids_tenders_master WHERE instancename = %s AND foldertype = 'tender' AND metadatastatus = 'MetadataPending' ")
-    cursor.execute(tender_query_total,(instancename,))
-    tender_total = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    bids = [
-        {
-            'bids_datafolder': bid[0],
-            'bids_archivefolder': bid[1]
-        } for bid in bids_total
-    ]
-    
-    tenders = [
-        {
-            'tenders_datafolder': tender[0],
-            'tenders_archivefolder': tender[1]
-        } for tender in tender_total
-    ]
-
-    result = {
-        'bids': bids,
-        'tenders': tenders
-    }
-
-    return jsonify(result)
-
-
-
-#Error-Instance
-@app.route('/getBidsTenderInstanceError', methods=['GET'])
-def getBidsTenderInstanceError():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    instancename = request.args.get('instancename')
-    
-    bids_query_total = sql.SQL(
-        "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
-        "WHERE instancename = %s AND foldertype = 'bids' AND archivestatus LIKE %s"
-    )
-    cursor.execute(bids_query_total, (instancename, '%SyncError%'))
-    bids_total = cursor.fetchall()
-
-    tender_query_total = sql.SQL(
-        "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
-        "WHERE instancename = %s AND foldertype = 'tender' AND archivestatus LIKE %s"
-    )
-    cursor.execute(tender_query_total, (instancename, '%SyncError%'))
-    tender_total = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    bids = [
-        {
-            'bids_datafolder': bid[0],
-            'bids_archivefolder': bid[1]
-        } for bid in bids_total
-    ]
-    
-    tenders = [
-        {
-            'tenders_datafolder': tender[0],
-            'tenders_archivefolder': tender[1]
-        } for tender in tender_total
-    ]
-
-    result = {
-        'bids': bids,
-        'tenders': tenders
-    }
-
-    return jsonify(result)"""
-
-
-
-'''
-@app.route('/getBidsTenderOnProcess', methods=['GET'])
-@app.route('/getBidsTenderMetalink', methods=['GET'])
-
-
-
-
-
-
-'''
 
 
 if __name__ == '__main__':
