@@ -21,7 +21,7 @@ conn = psycopg2.connect(
 def index():
     return "hello"
 
-@app.route('/api/get_data', methods=['GET'])
+@app.route('/postConfigMaster', methods=['GET'])
 def get_data():
     # Create a cursor object to execute SQL queries
     cursor = conn.cursor()
@@ -81,4 +81,4 @@ def update_data():
 
 # Run the Flask app
 if __name__ == '__main__':
-    app.run(host='192.168.0.109',port=5500,debug=True)
+    app.run(host='192.168.0.110',port=5500,debug=True)
