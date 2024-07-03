@@ -69,53 +69,49 @@ def getImages():
     return jsonify(images_with_base64)
 #for logos and images
 #################################################################################################
-def get_instancename_count(instancename):
+def get_instancename_count(instancename=None):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Query to get total count
-    query_total = sql.SQL("SELECT COUNT(*) FROM gepnicas_bids_tenders_master WHERE instancename = %s")
-    cursor.execute(query_total, (instancename,))
-    count_total = cursor.fetchone()[0]
+    # Base query and condition
+    base_query = "SELECT COUNT(*) FROM gepnicas_bids_tenders_master"
+    condition = " WHERE instancename = %s" if instancename else ""
+    params = (instancename,) if instancename else ()
 
-    # Query to get count where archivestatus is 'SyncCompleted'
-    query_sync_completed = sql.SQL("SELECT COUNT(*) FROM gepnicas_bids_tenders_master WHERE instancename = %s AND archivestatus = 'SyncCompleted'")
-    cursor.execute(query_sync_completed, (instancename,))
-    count_sync_completed = cursor.fetchone()[0]
+    def execute_query(additional_condition):
+        query = sql.SQL(base_query + condition + additional_condition)
+        cursor.execute(query, params)
+        return cursor.fetchone()[0]
 
-#Softlink created
+    # Total count
+    count_total = execute_query("")
 
-    query_soft_link_created = sql.SQL("SELECT COUNT(*) FROM gepnicas_bids_tenders_master WHERE instancename = %s AND softlinkstatus = 'SoftLinkCreated'")
-    cursor.execute(query_soft_link_created, (instancename,))
-    count_soft_link_completed = cursor.fetchone()[0]
+    # SyncCompleted count
+    count_sync_completed = execute_query(" AND archivestatus = 'SyncCompleted'") if instancename else execute_query(" WHERE archivestatus = 'SyncCompleted'")
 
-#Errors
-    query_errors = sql.SQL("SELECT COUNT(*) FROM gepnicas_bids_tenders_master WHERE instancename = %s AND archivestatus = 'SyncError-FolderNotFound'")
-    cursor.execute(query_errors, (instancename,))
-    count_errors = cursor.fetchone()[0]
+    # SoftLinkCreated count
+    count_soft_link_completed = execute_query(" AND softlinkstatus = 'SoftLinkCreated'") if instancename else execute_query(" WHERE softlinkstatus = 'SoftLinkCreated'")
 
-#Metalink
-    query_meta_link_created = sql.SQL("SELECT COUNT(*) FROM gepnicas_bids_tenders_master WHERE instancename = %s AND metadatastatus = 'MetadataPending'")
-    cursor.execute(query_meta_link_created, (instancename,))
-    count_meta_link = cursor.fetchone()[0]
+    # SyncError-FolderNotFound count
+    count_errors = execute_query(" AND archivestatus = 'SyncError-FolderNotFound'") if instancename else execute_query(" WHERE archivestatus = 'SyncError-FolderNotFound'")
 
-#Foldersize
-    query_folder_size = sql.SQL("SELECT SUM(foldersize) FROM gepnicas_bids_tenders_master WHERE instancename = %s")
-    cursor.execute(query_folder_size, (instancename,))
+    # MetadataPending count
+    count_meta_link = execute_query(" AND metadatastatus = 'MetadataPending'") if instancename else execute_query(" WHERE metadatastatus = 'MetadataPending'")
+
+    # Folder size
+    query_folder_size = sql.SQL("SELECT SUM(foldersize) FROM gepnicas_bids_tenders_master" + condition)
+    cursor.execute(query_folder_size, params)
     instance_storage_size = cursor.fetchone()[0]
-    print(type(instance_storage_size))
-    if instance_storage_size == None:
-        instance_storage_size = 0
+    instance_storage_size = instance_storage_size / 1000000000 if instance_storage_size else 0
+
+    # Logo
+    if instancename:
+        logo_query = sql.SQL("SELECT logo FROM gepnicas_logos WHERE instancename = %s")
+        cursor.execute(logo_query, (instancename,))
+        logo_image = cursor.fetchone()[0]
+        logo_image_encoded = base64.b64encode(logo_image).decode('utf-8') if logo_image else None
     else:
-
-        instance_storage_size=instance_storage_size/1000000000
-
-
-    logo=sql.SQL("SELECT logo from gepnicas_logos WHERE instancename=%s")
-    cursor.execute(logo,(instancename,))
-    logo_image=cursor.fetchone()[0]
-
-
+        logo_image_encoded = None
 
     cursor.close()
     conn.close()
@@ -124,106 +120,23 @@ def get_instancename_count(instancename):
         'total_count': count_total,
         'sync_completed_count': count_sync_completed,
         'soft_link_created': count_soft_link_completed,
-        'errors_count':count_errors,
-        'meta_link_created':count_meta_link,
-        'instance_storage_size':instance_storage_size,
-        'logo': base64.b64encode(logo_image).decode('utf-8')
+        'errors_count': count_errors,
+        'meta_link_created': count_meta_link,
+        'instance_storage_size': instance_storage_size,
+        'logo': logo_image_encoded
     }
 
-
-
 @app.route('/getInstanceCount', methods=['GET'])
-
-
 def getInstanceCount():
     instancename = request.args.get('instancename')
-    if not instancename:
-        return jsonify({'error': 'instancename parameter is required'}), 400
-
     counts = get_instancename_count(instancename)
     return jsonify({
         'instancename': instancename,
         'counts': counts
     })
-#total counts
-####################################################################################################
-
-
-def get_instancename_count_all():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Query to get total count
-    query_total = sql.SQL("SELECT COUNT(*) FROM gepnicas_bids_tenders_master")
-    cursor.execute(query_total)
-    count_total = cursor.fetchone()[0]
-
-    # Query to get count where archivestatus is 'SyncCompleted'
-    query_sync_completed = sql.SQL("SELECT COUNT(*) FROM gepnicas_bids_tenders_master WHERE archivestatus = 'SyncCompleted'")
-    cursor.execute(query_sync_completed)
-    count_sync_completed = cursor.fetchone()[0]
-
-#Softlink created
-
-    query_soft_link_created = sql.SQL("SELECT COUNT(*) FROM gepnicas_bids_tenders_master WHERE  softlinkstatus = 'SoftLinkCreated'")
-    cursor.execute(query_soft_link_created)
-    count_soft_link_completed = cursor.fetchone()[0]
-
-#Errors
-    query_errors = sql.SQL("SELECT COUNT(*) FROM gepnicas_bids_tenders_master WHERE  archivestatus like '%SyncError%'")
-
-    cursor.execute(query_errors)
-    count_errors = cursor.fetchone()[0]
-
-#Metalink
-    query_meta_link_created = sql.SQL("SELECT COUNT(*) FROM gepnicas_bids_tenders_master WHERE  metadatastatus = 'MetadataPending'")
-    cursor.execute(query_meta_link_created)
-    count_meta_link = cursor.fetchone()[0]
-
-#Foldersize
-    query_folder_size = sql.SQL("SELECT SUM(foldersize) FROM gepnicas_bids_tenders_master ")
-    cursor.execute(query_folder_size)
-    instance_storage_size = cursor.fetchone()[0]
-    instance_storage_size=instance_storage_size/1000000000
-
-
-    
-
-
-
-    cursor.close()
-    conn.close()
-
-    return {
-        'total_count': count_total,
-        'sync_completed_count': count_sync_completed,
-        'soft_link_created': count_soft_link_completed,
-        'errors_count':count_errors,
-        'meta_link_created':count_meta_link,
-        'instance_storage_size':instance_storage_size
-    }
-
-
-
-@app.route('/getInstanceCountAll', methods=['GET'])
-
-def getInstanceCountAll():
-   
-
-    counts = get_instancename_count_all()
-    return jsonify({
-        
-        'counts': counts
-    })
-
-
-
 
 #Total records
 ##############################################################################################
-
-
-
 ##############################################################################################
 #for sending bids and tenders-for both instance and all 
 def fetch_bids_and_tenders(cursor, bids_query, tenders_query, params):
@@ -384,8 +297,6 @@ def getBidsTenderInstanceError():
 
     return jsonify(result)
 
-
-
 @app.route('/getBidsTenderInstanceSoftlink', methods=['GET'])
 def getBidsTenderInstanceSoftlink():
     conn = get_db_connection()
@@ -419,8 +330,6 @@ def getBidsTenderInstanceSoftlink():
     conn.close()
 
     return jsonify(result)
-
-
 
 @app.route('/getBidsTenderInstanceOnProcess', methods=['GET'])
 def getBidsTenderInstanceOnProcess():
@@ -484,7 +393,6 @@ def get_data():
         return jsonify(data), 200
     else:
         return jsonify({'error': 'Data not found'}), 404
-
 
 # Define a route to handle POST requests
 @app.route('/postConfigMaster', methods=['POST'])
