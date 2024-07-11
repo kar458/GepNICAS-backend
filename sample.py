@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 # Database connection configuration
 conn = psycopg2.connect(
-    dbname="gepnicas",
+    dbname="gepnicas_infra",
     user="postgres",
     password="Preethi@31",
     host="localhost",

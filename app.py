@@ -426,13 +426,101 @@ def update_data():
 
 
 
+@app.route('/getSystemName',methods=['GET'])
+def get_name():
+    conn=get_db_connection()
+    cursor=conn.cursor()
 
+    sql_query="SELECT archive_solution_shortname,archive_solution_fullname FROM gepnicas_config_master WHERE id=1"
+    cursor.execute(sql_query)
+
+    result=cursor.fetchone()
+
+    cursor.close()
+
+    if result:
+        data = {
+            
+            'archive_solution_shortname': result[0],
+            'archive_solution_fullname': result[1],
+        
+        }
+        return jsonify(data), 200
+    else:
+        return jsonify({'error': 'Data not found'}), 404
 
 
 #Total records-Instance
 #################################################################
+@app.route('/postSystemInfo', methods=['POST'])
+def update_system():
+    # Get the JSON data from the request
+    data = request.get_json()
+    conn = get_db_connection()
+
+    # Create a cursor object to execute SQL queries
+    cursor = conn.cursor()
+
+    # Check if data is in the correct format
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Invalid data format, expected a dictionary'}), 400
+
+    for id, entry in data.items():
+        storage_name = entry.get('storage_name')
+        storage_capacity = entry.get('storage_capacity')
+        storage_used = entry.get('storage_used')
+
+        if not all([id, storage_name, storage_capacity, storage_used]):
+            return jsonify({'error': f'Missing data in request for id {id}'}), 400
+
+        # SQL query to update data in the database for the given id
+        sql_query = """
+        UPDATE gepnicas_primary_storage_master
+        SET storage_name = %s, storage_capacity = %s, storage_used = %s
+        WHERE id = %s
+        """
+        cursor.execute(sql_query, (storage_name, storage_capacity, storage_used, id))
+
+    # Commit the transaction
+    conn.commit()
+
+    # Close the cursor and connection
+    cursor.close()
+    conn.close()
+
+    # Return a JSON response
+    return jsonify({'message': 'Data updated successfully'}), 200
+
+
+@app.route('/postSystemInfo', methods=['GET'])
+def get_system():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # SQL query to fetch data from the database
+    sql_query = "SELECT id, storage_name, storage_capacity, storage_used FROM gepnicas_primary_storage_master;"
+
+    cursor.execute(sql_query)
+    rows = cursor.fetchall()
+
+    # Format the results as a dictionary
+    results = {}
+    for row in rows:
+        results[row[0]] = {
+            'storage_name': row[1],
+            'storage_capacity': row[2],
+            'storage_used': row[3]
+        }
+
+    # Close the cursor and connection
+    cursor.close()
+    conn.close()
+
+    # Return the results as a JSON response
+    return jsonify(results)
+
 
 
 
 if __name__ == '__main__':
-    app.run(host='192.168.0.111', port=5000, debug=True)
+    app.run(host='192.168.0.113', port=5000, debug=True)
