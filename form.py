@@ -276,6 +276,50 @@ def get_records_by_instancename():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/deleteConfigMaster', methods=['DELETE'])
+def delete_record_by_instancename():
+    try:
+        # Get the instancename from the request parameters
+        instancename = request.args.get('instancename')
+
+        if not instancename:
+            return jsonify({'error': 'instancename parameter is required'}), 400
+
+        # Create a cursor object to execute SQL queries
+        
+        cursor = conn.cursor()
+
+        # SQL query to delete record by instancename
+        sql_query = """
+        DELETE FROM gepnicas_primary_infra
+        WHERE instancename = %s
+        """
+
+        # Execute the query
+        cursor.execute(sql_query, (instancename,))
+        conn.commit()
+
+        # Check how many rows were deleted
+        rows_deleted = cursor.rowcount
+
+        # Close the cursor and connection
+        cursor.close()
+        
+
+        if rows_deleted == 0:
+            return jsonify({'message': 'No records found to delete'}), 404
+        else:
+            return jsonify({'message': f'{rows_deleted} record(s) deleted'}), 200
+
+    except Exception as e:
+        # Rollback the transaction in case of error
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # Run the Flask app
 if __name__ == '__main__':
-    app.run(host='192.168.0.109', port=8000, debug=True)
+    app.run(host='192.168.0.112', port=8000, debug=True)
