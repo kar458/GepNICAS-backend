@@ -229,7 +229,7 @@ def getBidsTenderInstanceArchived():
 
     return jsonify(result)
 
-@app.route('/getBidsTenderInstanceMetalink', methods=['GET'])
+@app.route('/getBidsTenderInstanceMetalinkPending', methods=['GET'])
 def getBidsTenderInstanceMetalink():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -238,11 +238,11 @@ def getBidsTenderInstanceMetalink():
     if instancename:
         bids_query_total = sql.SQL(
             "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
-            "WHERE instancename = %s AND foldertype = 'bids' AND metadatastatus != 'MetadataCreated'"
+            "WHERE instancename = %s AND foldertype = 'bids' AND metadatastatus != 'MetadataCreated' AND archivestatus='SyncCompleted' "
         )
         tenders_query_total = sql.SQL(
             "SELECT datafolder, archivefolder FROM gepnicas_bids_tenders_master "
-            "WHERE instancename = %s AND foldertype = 'tender' AND metadatastatus != 'MetadataCteated'"
+            "WHERE instancename = %s AND foldertype = 'tender' AND metadatastatus != 'MetadataCreated' AND archivestatus='SyncCompleted' "
         )
         params = (instancename,)
     else:
@@ -297,7 +297,7 @@ def getBidsTenderInstanceError():
 
     return jsonify(result)
 
-@app.route('/getBidsTenderInstanceSoftlink', methods=['GET'])
+@app.route('/getBidsTenderInstanceSoftlinkPending', methods=['GET'])
 def getBidsTenderInstanceSoftlink():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -331,7 +331,7 @@ def getBidsTenderInstanceSoftlink():
 
     return jsonify(result)
 
-@app.route('/getBidsTenderInstanceOnProcess', methods=['GET'])
+@app.route('/getBidsTenderInstanceSyncPending', methods=['GET'])
 def getBidsTenderInstanceOnProcess():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -431,7 +431,7 @@ def get_name():
     conn=get_db_connection()
     cursor=conn.cursor()
 
-    sql_query="SELECT archive_solution_shortname,archive_solution_fullname FROM gepnicas_config_master WHERE id=1"
+    sql_query="SELECT archive_solution_shortname,archive_solution_fullname,logo FROM gepnicas_config_master WHERE id=1"
     cursor.execute(sql_query)
 
     result=cursor.fetchone()
@@ -439,11 +439,18 @@ def get_name():
     cursor.close()
 
     if result:
+        shortname, fullname, logo = result
+
+        # Encode the image in base64
+        if logo:
+            logo_base64 = base64.b64encode(logo).decode('utf-8')
+        else:
+            logo_base64 = None
+
         data = {
-            
-            'archive_solution_shortname': result[0],
-            'archive_solution_fullname': result[1],
-        
+            'archive_solution_shortname': shortname,
+            'archive_solution_fullname': fullname,
+            'logo': logo_base64
         }
         return jsonify(data), 200
     else:
@@ -520,7 +527,46 @@ def get_system():
     return jsonify(results)
 
 
+def get_folder_size_with_archivestatus():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Define the condition to include archivestatus
+        condition = "archivestatus='SyncCompleted'"
+        
+        # Prepare the SQL query
+        query_folder_size = sql.SQL("SELECT SUM(foldersize) FROM gepnicas_bids_tenders_master WHERE " + condition)
+        
+        # Execute the query
+        cursor.execute(query_folder_size)
+        
+        # Fetch the result
+        instance_storage_size = cursor.fetchone()[0]
+        
+        # Convert the size from bytes to gigabytes
+        instance_storage_size = instance_storage_size / 1000000000 if instance_storage_size else 0
+        
+        return instance_storage_size
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error: {error}")
+        return 0
+
+    finally:
+        if cursor:
+            cursor.close()
+
+@app.route('/folder-size', methods=['GET'])
+def folder_size():
+    try:
+        size_in_tb = get_folder_size_with_archivestatus()
+        return jsonify({"folder_size_in_tb": size_in_tb})
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        return jsonify({"error": str(error)}), 500
+
 
 
 if __name__ == '__main__':
-    app.run(host='192.168.0.108', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
