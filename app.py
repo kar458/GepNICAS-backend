@@ -3,18 +3,24 @@ from flask_cors import CORS
 import psycopg2
 import base64
 from psycopg2 import sql
+from dotenv import load_dotenv
+import os
+
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 
 # Database connection configuration
 DB_CONFIG = {
-    'host': '127.0.0.1',  # Replace with your PostgreSQL host
-    'dbname': 'gepnicas',  # Replace with your database name
-    'user': 'postgres',  # Replace with your PostgreSQL username
-    'password': 'Preethi@31',  # Replace with your PostgreSQL password
-    'port': '5432'  # Default port is 5432
+    'host': os.getenv('DB_HOST'),
+    'dbname': os.getenv('DB_NAME'),
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
+    'port': os.getenv('DB_PORT')
 }
+
 
 def get_db_connection():
     conn = psycopg2.connect(
@@ -78,9 +84,9 @@ def get_instancename_count(instancename=None):
     condition = " WHERE instancename = %s" if instancename else ""
     params = (instancename,) if instancename else ()
 
-    def execute_query(additional_condition):
+    def execute_query(additional_condition, additional_params=()):
         query = sql.SQL(base_query + condition + additional_condition)
-        cursor.execute(query, params)
+        cursor.execute(query, params + additional_params)
         return cursor.fetchone()[0]
 
     # Total count
@@ -90,13 +96,16 @@ def get_instancename_count(instancename=None):
     count_sync_completed = execute_query(" AND archivestatus = 'SyncCompleted'") if instancename else execute_query(" WHERE archivestatus = 'SyncCompleted'")
 
     # SoftLinkCreated count
-    count_soft_link_completed = execute_query(" AND softlinkstatus = 'SoftLinkCreated'") if instancename else execute_query(" WHERE softlinkstatus = 'SoftLinkCreated'")
+    count_soft_link_completed = execute_query(" AND metadatastatus = 'MetadataCreated' AND softlinkstatus != 'SoftLinkCreated'") if instancename else execute_query(" WHERE metadatastatus = 'MetadataCreated' AND softlinkstatus != 'SoftLinkCreated'")
 
     # SyncError-FolderNotFound count
-    count_errors = execute_query(" AND archivestatus = 'SyncError-FolderNotFound'") if instancename else execute_query(" WHERE archivestatus = 'SyncError-FolderNotFound'")
+    count_errors = execute_query(" AND archivestatus LIKE %s", ('%SyncError%',)) if instancename else execute_query(" WHERE archivestatus LIKE %s", ('%SyncError%',))
 
     # MetadataPending count
-    count_meta_link = execute_query(" AND metadatastatus = 'MetadataPending'") if instancename else execute_query(" WHERE metadatastatus = 'MetadataPending'")
+    count_meta_link = execute_query(" AND metadatastatus != 'MetadataCreated' AND archivestatus = 'SyncCompleted'") if instancename else execute_query(" WHERE metadatastatus != 'MetadataCreated' AND archivestatus = 'SyncCompleted'")
+
+    # SyncPending count
+    count_sync_pending = execute_query(" AND archivestatus != 'SyncCompleted' AND archivestatus NOT LIKE %s", ('%SyncError%',)) if instancename else execute_query(" WHERE archivestatus != 'SyncCompleted' AND archivestatus NOT LIKE %s", ('%SyncError%',))
 
     # Folder size
     query_folder_size = sql.SQL("SELECT SUM(foldersize) FROM gepnicas_bids_tenders_master" + condition)
@@ -118,13 +127,17 @@ def get_instancename_count(instancename=None):
 
     return {
         'total_count': count_total,
-        'sync_completed_count': count_sync_completed,
-        'soft_link_created': count_soft_link_completed,
+        'archived_count': count_sync_completed,
+        'soft_link_created_count': count_soft_link_completed,
         'errors_count': count_errors,
-        'meta_link_created': count_meta_link,
+        'meta_link_created_count': count_meta_link,
+        'sync_pending_count': count_sync_pending,
         'instance_storage_size': instance_storage_size,
         'logo': logo_image_encoded
     }
+
+
+
 
 @app.route('/getInstanceCount', methods=['GET'])
 def getInstanceCount():
@@ -569,4 +582,4 @@ def folder_size():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host=os.getenv('FLASK_HOST'), port=os.getenv('FLASK_PORT'), debug=os.getenv('FLASK_DEBUG') == 'True')
