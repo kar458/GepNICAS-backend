@@ -32,25 +32,6 @@ def get_db_connection():
     )
     return conn
 #implement try catch block
-@app.route('/')
-def index():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT id, portalname, logo FROM gepnicas_logos')
-    alerts = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    
-    # Convert binary data to base64 string
-    alerts_with_base64 = [
-        {
-            'id': alert[0],
-            'portalname': alert[1],
-            'logo': base64.b64encode(alert[2]).decode('utf-8')
-        } for alert in alerts
-    ]
-    
-    return render_template('index.html', alerts=alerts_with_base64)
 
 # removed the getvalue sample get method
 
